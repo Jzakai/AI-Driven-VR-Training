@@ -1,6 +1,4 @@
-from supabase import create_client
 
-supabase = create_client(URL, KEY)
 
 def save_scenario(scenario_json, skill, skill_category, difficulty, version):
     result = supabase.table("scenarios").insert({

@@ -1,9 +1,22 @@
+
 from textwrap import dedent
 from agno.agent import Agent
-from agno.embedder.openai import OpenAIEmbedder
-from agno.knowledge.pdf_url import PDFUrlKnowledgeBase
-from agno.models.openai import OpenAIChat
-from agno.vectordb.lancedb import LanceDb, SearchType
+from agno.models.openai import OpenAIChat, OpenAIEmbeddings
+from agno.knowledge.loaders.file_loader import FileLoader
+
+from agno.knowledge import KnowledgeBase
+from agno.vectordb.lancedb import LanceDB
+from agno.vectordb.search import SearchType
+
+import os
+from dotenv import load_dotenv
+from openai import OpenAI
+
+load_dotenv()
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 def generate_scenario_from_agent(skill_category: str, skill: str, difficulty: str):
     """
@@ -49,31 +62,31 @@ def generate_scenario_from_agent(skill_category: str, skill: str, difficulty: st
         Your tone must be factual, concise, and militarily accurate.
     """)
 
+    # Knowledge Base
+    kb = KnowledgeBase(
+        loaders=[PDFReader("backend/protocols/TCCC_guidelines.pdf")],
+        vector_db=LanceDB(
+            uri="tmp/scenario_lancedb",
+            table_name="tccc_knowledge",
+            search_type=SearchType.hybrid,
+            embedder=OpenAIEmbeddings(model="text-embedding-3-small"),
+        )
+    )
+
+    # Load PDF + create embeddings if not already embedded
+    kb.load()
+
+   # Agent
     agent = Agent(
-        model=OpenAIChat(id="gpt-4o"),
+        model=OpenAIChat(model="gpt-4o-mini"),
         instructions=instructions,
-        knowledge=PDFUrlKnowledgeBase(
-            urls=[
-                # Replace with real TCCC/MARCH PDF storage URLs or direct content
-                "https://example.com/TCCC_guidelines.pdf"
-            ],
-            vector_db=LanceDb(
-                uri="tmp/scenario_lancedb",
-                table_name="tccc_knowledge",
-                search_type=SearchType.hybrid,
-                embedder=OpenAIEmbedder(id="text-embedding-3-small"),
-            ),
-        ),
+        knowledge=kb,
         markdown=True,
         add_references=True,
     )
 
-    # Load embeddings for RAG
-    if agent.knowledge is not None:
-        agent.knowledge.load()
-
     # Return response
-    response = agent.run({
+    response = agent({
         "skill_category": skill_category,
         "skill": skill,
         "difficulty": difficulty
@@ -83,11 +96,11 @@ def generate_scenario_from_agent(skill_category: str, skill: str, difficulty: st
 
 def modify_scenario_with_agent(existing_json, edits):
     agent = Agent(
-        model=OpenAIChat(id="gpt-4o"),
+       model=OpenAIChat(model="gpt-4o-mini"),
         instructions="Modify the scenario based on edits without changing structure."
     )
 
-    response = agent.run({
+    response = agent({
         "existing_scenario": existing_json,
         "requested_edits": edits
     })
