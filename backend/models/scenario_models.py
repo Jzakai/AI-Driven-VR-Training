@@ -6,6 +6,7 @@ class GenerateScenarioRequest(BaseModel):
     skill: str
     difficulty: str
 
+
 class SaveScenarioRequest(BaseModel):
     scenario_id: str | None = None
     scenario_json: Dict
@@ -14,3 +15,9 @@ class SaveScenarioRequest(BaseModel):
     difficulty: str
     version: int
     edits: Dict | None = None
+    course_name: str
+
+
+class EditScenarioRequest(BaseModel):
+    edits: str
+

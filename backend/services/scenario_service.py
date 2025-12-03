@@ -15,6 +15,7 @@ def orchestrate_generate_scenario(req):
         req.skill_category,
         req.difficulty,
         version=1,
+    
     )
 
     return {
@@ -23,7 +24,7 @@ def orchestrate_generate_scenario(req):
         "skill": req.skill,
         "skill_category": req.skill_category,
         "difficulty": req.difficulty,
-        "version": 1
+        "version": 1,
     }
 
 
@@ -41,7 +42,28 @@ def orchestrate_save_scenario(req):
         req.skill,
         req.skill_category,
         req.difficulty,
-        req.version
+        req.version,
+        req.course_name
+
+    )
+
+    return {"status": "Saved", "scenario_id": req.scenario_id}
+
+
+def orchestrate_edit_scenario(req):
+
+    if req.edits:
+        updated_json = modify_scenario_with_agent(req.scenario_json, req.edits)
+        validate_scenario_schema(updated_json)
+
+    scenario_repo.save_scenario(
+        updated_json,
+        req.skill,
+        req.skill_category,
+        req.difficulty,
+        req.version,
+        req.course_name
+
     )
 
     return {"status": "Saved", "scenario_id": req.scenario_id}
